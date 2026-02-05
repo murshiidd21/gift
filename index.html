@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>A Small Story</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f6f1e7;
+      --text: #2b2b2b;
+      --muted: #6b6b6b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Libre Baskerville", serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .book {
+      width: min(90%, 520px);
+      min-height: 320px;
+      padding: 40px 35px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page {
+      position: absolute;
+      inset: 0;
+      padding: 40px 35px;
+      opacity: 0;
+      transform: translateX(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .page.active {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    p {
+      font-size: 1rem;
+      line-height: 1.8;
+      margin: 0 0 16px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .small {
+      font-size: 0.85rem;
+      opacity: 0.75;
+      margin-top: 24px;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    button {
+      margin-top: 28px;
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    button:hover {
+      color: var(--text);
+    }
+
+    .final {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="book">
+
+    <div class="page active center">
+      <p>This isn’t a website</p>
+      <p class="muted">it’s a small story</p>
+      <button onclick="nextPage()">Start reading →</button>
+    </div>
+
+    <div class="page">
+      <p class="small muted" style="font-style: italic; margin-bottom: 24px;">
+        for Tume🦚
+      </p>
+
+      <p>For the past few months</p>
+      <p>things have been going…</p>
+      <p class="muted">a bit smoother than usual</p>
+
+      <button onclick="nextPage()">turn the page</button>
+    </div>
+
+    <div class="page">
+      <p>Probably because I get to see someone</p>
+      <p>as great as you</p>
+
+      <p class="small">
+        I mean<br>
+        not <em>that</em> great 😁<br>
+        (had to humble you)
+      </p>
+
+      <button onclick="nextPage()">keep reading</button>
+    </div>
+
+    <div class="page">
+      <p>But great in the way</p>
+      <p>a really good book is great</p>
+
+      <p class="muted">
+        The kind you don’t rush<br>
+        and don’t forget
+      </p>
+
+      <button onclick="nextPage()">next page</button>
+    </div>
+
+    <div class="page">
+      <p>I’m really grateful for you</p>
+      <p class="muted">you know that, right</p>
+
+      <p>
+        As a really good<br>
+        close friend first and foremost
+      </p>
+
+      <p class="muted">
+        And as someone genuinely<br>
+        important in my life
+      </p>
+
+      <p class="small">
+        I don’t even know if I’m truly deserving of that<br>
+        but <em>alhamdulillah</em>
+      </p>
+
+      <button onclick="nextPage()">continue</button>
+    </div>
+
+    <div class="page">
+      <p>I wanted to give you something</p>
+      <p class="muted">not yet though</p>
+
+      <p class="small">
+        You could guess what it is<br>
+        but that would ruin the fun
+      </p>
+
+      <button onclick="nextPage()">one more page</button>
+    </div>
+
+    <div class="page final">
+      <p>The gift is close</p>
+      <p class="muted">really close</p>
+
+      <p class="small">
+        Now wait for it<br>
+        like the last chapter of a good book
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    const pages = document.querySelectorAll(".page");
+    let current = 0;
+
+    function nextPage() {
+      pages[current].classList.remove("active");
+      current++;
+      if (current < pages.length) {
+        pages[current].classList.add("active");
+      }
+    }
+  </script>
+
+</body>
+</html>
