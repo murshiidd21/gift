@@ -27,6 +27,9 @@
             overflow: hidden;
             touch-action: none;
             /* Prevent scrolling */
+            user-select: none;
+            /* Prevent selection */
+            -webkit-user-select: none;
         }
 
         #card {
@@ -170,146 +173,224 @@
     <script>
         const crank = document.getElementById('crank');
         const progressBar = document.getElementById('progress-bar');
-        const audio = document.getElementById('audioPlayer');
         const instruction = document.getElementById('instruction');
 
-        // State
+        // Web Audio API Context
+        // We use this because standard <audio> volume control doesn't work on iOS
+        let audioCtx;
+        let audioSource;
+        let gainNode;
+        let audioBuffer;
+        let isAudioLoaded = false;
+        let isAudioPlaying = false;
+        let audioStartTime = 0;
+        let audioOffset = 0;
+
+        // Load Audio Buffer for responsive playback (better than streaming HTML5 audio for scrubbing/speed)
+        async function initAudio() {
+            if (isAudioLoaded) return;
+            try {
+                const response = await fetch('voice.mp3');
+                const arrayBuffer = await response.arrayBuffer();
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                isAudioLoaded = true;
+            } catch (error) {
+                console.error("Audio init failed:", error);
+            }
+        }
+
+        // Initialize on first interaction
+        function enableAudio() {
+            if (!audioCtx) initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Source Management
+        let currentSourceNode = null;
+
+        function updateAudioPlayback(speed) {
+            if (!isAudioLoaded || !audioCtx) return;
+
+            // Calculate gain (volume) based on speed
+            // Smooth fade in/out
+            const targetVolume = Math.min(1, Math.max(0, (speed - 0.5) * 2)); // 0.5 speed = 0 vol, 1.0 speed = 1 vol
+
+            if (speed > 0.1) {
+                if (!isAudioPlaying) {
+                    playSource();
+                }
+
+                // Update Playback Rate
+                if (currentSourceNode) {
+                    const rate = Math.max(0.5, Math.min(speed / 10, 2.0)); // Normalize speed to rate
+                    currentSourceNode.playbackRate.value = rate;
+                }
+
+                // Update Volume
+                if (gainNode) {
+                    gainNode.gain.setTargetAtTime(1, audioCtx.currentTime, 0.1); // Smooth ramp to full
+                }
+
+                instruction.style.opacity = 0;
+            } else {
+                // Stop/Fade out
+                if (gainNode) {
+                    gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                }
+                // We don't stop the node immediately to allow smooth fade out
+                // But if speed stays 0 for a while, we could pause? 
+                // For now, let it run silent (looping) is easier for continuity.
+
+                instruction.style.opacity = isDragging ? 0 : 1;
+            }
+        }
+
+        function playSource() {
+            if (isAudioPlaying || !audioBuffer) return;
+
+            // Create graph
+            currentSourceNode = audioCtx.createBufferSource();
+            currentSourceNode.buffer = audioBuffer;
+            currentSourceNode.loop = true;
+
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0; // Start silent
+
+            currentSourceNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            currentSourceNode.start(0, audioOffset);
+            isAudioPlaying = true;
+            lastPlayTime = audioCtx.currentTime;
+        }
+
+        // Physics State
         let isDragging = false;
         let lastAngle = 0;
         let currentRotation = 0;
         let lastRotation = 0;
+        let velocity = 0;
+        let crankCenter = { x: 0, y: 0 };
 
-        // Settings
-        const SENSITIVITY = 1.0;
-
-        // Position Helper
-        function getCenter(element) {
-            const rect = element.getBoundingClientRect();
-            return {
+        // Optimized Center Caching
+        function updateCenter() {
+            const rect = crank.getBoundingClientRect();
+            crankCenter = {
                 x: rect.left + rect.width / 2,
                 y: rect.top + rect.height / 2
             };
         }
 
-        // Angle Helper
+        // Initial Center Update
+        updateCenter();
+        window.addEventListener('resize', updateCenter);
+        window.addEventListener('scroll', updateCenter);
+
         function getAngle(x, y) {
-            const center = getCenter(crank);
-            return Math.atan2(y - center.y, x - center.x) * (180 / Math.PI);
+            // Use cached center to avoid thrashing
+            return Math.atan2(y - crankCenter.y, x - crankCenter.x) * (180 / Math.PI);
         }
 
-        // Mouse/Touch Down
         function startDrag(e) {
             isDragging = true;
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            lastAngle = getAngle(clientX, clientY);
 
-            // Prime audio on first interaction
-            if (audio.paused && audio.currentTime === 0) {
-                audio.volume = 0;
-                audio.play().then(() => audio.pause()).catch(e => console.log(e));
-            }
-            crank.style.transition = 'none'; // Disable transition for instant dragged response
+            // Re-update center on touch start for safety (e.g. slight scroll shifts)
+            updateCenter();
+
+            lastAngle = getAngle(clientX, clientY);
+            enableAudio();
+
+            crank.style.transition = 'none'; // Instant response
         }
 
-        // Mouse/Touch Move
         function rotate(e) {
             if (!isDragging) return;
-            e.preventDefault();
+            e.preventDefault(); // Critical for mobile to prevent scroll
 
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
+            // Deadzone check: if too close to center, angles go wild. Ignore.
+            const dist = Math.hypot(clientX - crankCenter.x, clientY - crankCenter.y);
+            if (dist < 20) return; // 20px deadzone
+
             const newAngle = getAngle(clientX, clientY);
             let delta = newAngle - lastAngle;
 
-            // Fix wrap-around (e.g., crossing from 180 to -180)
+            // Unwrap Angle
             if (delta > 180) delta -= 360;
             if (delta < -180) delta += 360;
 
             currentRotation += delta;
             lastAngle = newAngle;
-
-            // Visual Update happens in loop for sync, but we can do it here too for instant feedback
-            // crank.style.transform = `rotate(${currentRotation}deg)`;
         }
 
-        // Mouse/Touch Up
         function stopDrag() {
             isDragging = false;
-            crank.style.transition = 'transform 0.5s ease-out'; // Momentum feel on release
+            // Add a little exit momentum transition
+            crank.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
         }
 
-        // Game Loop
-        let smoothedVelocity = 0;
-
+        // Loop
         function loop() {
-            // Calculate velocity based on frame-to-frame rotation difference
-            // This is more stable than event-based velocity
-            let velocity = currentRotation - lastRotation;
+            // Calculate Inertia/Momentum
+            // We use 'velocity' to track speed. 
+            // If dragging, velocity = current frame delta.
+            // If released, velocity decays.
+
+            let frameDelta = currentRotation - lastRotation;
             lastRotation = currentRotation;
 
-            // Apply to visual
-            crank.style.transform = `rotate(${currentRotation}deg)`;
-
-            // Audio Logic
-            // We want the audio to play if there is significant positive (clockwise) velocity
-            // Or just velocity in general? Let's say any winding works.
-            let speed = Math.abs(velocity);
-
-            // Smooth the velocity for audio playback to prevent jitter
-            smoothedVelocity += (speed - smoothedVelocity) * 0.1;
-
-            if (smoothedVelocity > 0.5) { // Threshold to start playing
-                if (audio.paused) {
-                    audio.play().catch(e => { }); // Ignore abortion errors
-                }
-
-                // Map speed to playback rate (optional, for fun physics)
-                // Normal winding might be ~5-15 deg per frame
-                let rate = 0.5 + (smoothedVelocity / 20);
-                rate = md_clamp(rate, 0.5, 2.0); // Clamp between 0.5x and 2.0x
-                audio.playbackRate = rate;
-
-                // Volume fade in
-                if (audio.volume < 1.0) audio.volume = Math.min(1.0, audio.volume + 0.05);
-
-                instruction.style.opacity = 0;
+            if (isDragging) {
+                // Smooth out input jitter
+                velocity += (frameDelta - velocity) * 0.3;
             } else {
-                // Stop/Pause logic
-                // Fade out
-                if (audio.volume > 0.05) {
-                    audio.volume -= 0.05;
-                } else {
-                    audio.volume = 0;
-                    audio.pause();
-                }
-                if (!isDragging) instruction.style.opacity = 0.8;
+                // Decay
+                velocity *= 0.95;
+                // Apply velocity to rotation when not dragging (spin effect)
+                currentRotation += velocity;
             }
 
-            // Update Progress
-            if (audio.duration) {
-                const p = (audio.currentTime / audio.duration) * 100;
-                progressBar.style.width = `${p}%`;
-            }
+            // Apply Transform
+            // Use translateZ(0) to force GPU layer
+            crank.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
+
+            // Audio Sync
+            updateAudioPlayback(Math.abs(velocity));
+
+            // Progress Bar simulation (just visual based on raw rotation for now, or tie to audio time if needed)
+            // Since we are looping a buffer, "progress" is relative to the loop. 
+            // Let's just create a nice visual effect that fills up as you wind.
+            // Or use the actual audio time if we tracked it?
+            // With BufferSource, we can't easily get 'currentTime' like <audio> element without tracking it manually.
+            // Let's simluate progress based on total rotation bound.
+
+            let progress = (Math.abs(currentRotation) % 3600) / 36; // 10 spins = 100%
+            progressBar.style.width = `${progress}%`;
 
             requestAnimationFrame(loop);
         }
 
-        function md_clamp(val, min, max) {
-            return Math.min(Math.max(val, min), max);
-        }
-
-        // Events
+        // Event Listeners
+        // Use passive: false to allow preventDefault
         crank.addEventListener('mousedown', startDrag);
         window.addEventListener('mousemove', rotate);
         window.addEventListener('mouseup', stopDrag);
 
+        // Mobile: Attach to container or body to catch 'fat finger' misses
+        const touchTarget = document.getElementById('card');
+        // actually sticking to crank but ensuring hit area is handled by UI layout
+
         crank.addEventListener('touchstart', startDrag, { passive: false });
         window.addEventListener('touchmove', rotate, { passive: false });
         window.addEventListener('touchend', stopDrag);
+        window.addEventListener('touchcancel', stopDrag);
 
-        // Start
         requestAnimationFrame(loop);
 
     </script>
