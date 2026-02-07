@@ -1,205 +1,318 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>A Small Story</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For You</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #fcfbf7;
+            background-image: url('floral-bg.png');
+            /* Ensure this file exists or fallback */
+            background-size: 300px;
+            background-repeat: repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Playfair Display', serif;
+            overflow: hidden;
+            touch-action: none;
+            /* Prevent scrolling */
+        }
 
-  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+        #card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(93, 64, 55, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            backdrop-filter: blur(8px);
+            max-width: 90%;
+            width: 340px;
+            border: 1px solid rgba(212, 163, 115, 0.3);
+        }
 
-  <style>
-    :root {
-      --bg: #f6f1e7;
-      --text: #2b2b2b;
-      --muted: #6b6b6b;
-    }
+        h1 {
+            font-size: 1.8rem;
+            color: #5d4037;
+            margin: 0 0 30px 0;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            text-align: center;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
 
-    * {
-      box-sizing: border-box;
-    }
+        #crank-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(230, 224, 212, 0.3) 0%, rgba(255, 255, 255, 0) 70%);
+        }
 
-    body {
-      margin: 0;
-      font-family: "Libre Baskerville", serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+        /* The Crank Image */
+        #crank {
+            width: 100%;
+            height: 100%;
+            background-image: url('crank.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            cursor: grab;
+            filter: drop-shadow(4px 4px 8px rgba(93, 64, 55, 0.2));
+            transform-origin: 50% 50%;
+            will-change: transform;
+            transition: transform 0.05s linear;
+            mix-blend-mode: multiply;
+            /* Handles white background in image */
+        }
 
-    .book {
-      width: min(90%, 520px);
-      min-height: 320px;
-      padding: 40px 35px;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.12);
-      position: relative;
-      overflow: hidden;
-    }
+        #crank:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+            /* Press effect */
+        }
 
-    .page {
-      position: absolute;
-      inset: 0;
-      padding: 40px 35px;
-      opacity: 0;
-      transform: translateX(20px);
-      transition: opacity 0.6s ease, transform 0.6s ease;
-    }
+        /* Progress Bar */
+        #progress-container {
+            width: 80%;
+            height: 6px;
+            background: #e6e0d4;
+            border-radius: 3px;
+            margin-top: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
 
-    .page.active {
-      opacity: 1;
-      transform: translateX(0);
-    }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #d4a373, #8d6e63);
+            transition: width 0.1s linear;
+        }
 
-    p {
-      font-size: 1rem;
-      line-height: 1.8;
-      margin: 0 0 16px;
-    }
+        #instruction {
+            margin-top: 20px;
+            color: #8d7b6f;
+            font-family: 'Lato', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+            transition: opacity 0.5s;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
 
-    .muted {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
+        /* Decorative flourishes */
+        .decoration {
+            position: absolute;
+            font-size: 2rem;
+            color: #d4a373;
+            opacity: 0.2;
+            pointer-events: none;
+            user-select: none;
+        }
 
-    .small {
-      font-size: 0.85rem;
-      opacity: 0.75;
-      margin-top: 24px;
-    }
+        .top-left {
+            top: 10px;
+            left: 10px;
+            transform: rotate(-45deg);
+        }
 
-    .center {
-      text-align: center;
-    }
-
-    button {
-      margin-top: 28px;
-      background: none;
-      border: none;
-      font-family: inherit;
-      font-size: 0.9rem;
-      color: var(--muted);
-      cursor: pointer;
-      transition: color 0.3s ease;
-    }
-
-    button:hover {
-      color: var(--text);
-    }
-
-    .final {
-      text-align: center;
-    }
-  </style>
+        .bottom-right {
+            bottom: 10px;
+            right: 10px;
+            transform: rotate(135deg);
+        }
+    </style>
 </head>
+
 <body>
 
-  <div class="book">
+    <div id="card">
+        <div class="decoration top-left">❀</div>
+        <div class="decoration bottom-right">❀</div>
 
-    <div class="page active center">
-      <p>This isn’t a website</p>
-      <p class="muted">it’s a small story</p>
-      <button onclick="nextPage()">Start reading →</button>
+        <h1>For You</h1>
+
+        <div id="crank-container">
+            <div id="crank"></div>
+        </div>
+
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+
+        <p id="instruction">Wind clockwise to listen</p>
     </div>
 
-    <div class="page">
-      <p class="small muted" style="font-style: italic; margin-bottom: 24px;">
-        for Tume🦚
-      </p>
+    <audio id="audioPlayer" src="voice.mp3" preload="auto" loop></audio>
 
-      <p>For the past few months</p>
-      <p>things have been going…</p>
-      <p class="muted">a bit smoother than usual</p>
+    <script>
+        const crank = document.getElementById('crank');
+        const progressBar = document.getElementById('progress-bar');
+        const audio = document.getElementById('audioPlayer');
+        const instruction = document.getElementById('instruction');
 
-      <button onclick="nextPage()">turn the page</button>
-    </div>
+        // State
+        let isDragging = false;
+        let lastAngle = 0;
+        let currentRotation = 0;
+        let lastRotation = 0;
 
-    <div class="page">
-      <p>Probably because I get to see someone</p>
-      <p>as great as you</p>
+        // Settings
+        const SENSITIVITY = 1.0;
 
-      <p class="small">
-        I mean<br>
-        not <em>that</em> great 😁<br>
-        (had to humble you)
-      </p>
+        // Position Helper
+        function getCenter(element) {
+            const rect = element.getBoundingClientRect();
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+        }
 
-      <button onclick="nextPage()">keep reading</button>
-    </div>
+        // Angle Helper
+        function getAngle(x, y) {
+            const center = getCenter(crank);
+            return Math.atan2(y - center.y, x - center.x) * (180 / Math.PI);
+        }
 
-    <div class="page">
-      <p>But great in the way</p>
-      <p>a really good book is great</p>
+        // Mouse/Touch Down
+        function startDrag(e) {
+            isDragging = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            lastAngle = getAngle(clientX, clientY);
 
-      <p class="muted">
-        The kind you don’t rush<br>
-        and don’t forget
-      </p>
+            // Prime audio on first interaction
+            if (audio.paused && audio.currentTime === 0) {
+                audio.volume = 0;
+                audio.play().then(() => audio.pause()).catch(e => console.log(e));
+            }
+            crank.style.transition = 'none'; // Disable transition for instant dragged response
+        }
 
-      <button onclick="nextPage()">next page</button>
-    </div>
+        // Mouse/Touch Move
+        function rotate(e) {
+            if (!isDragging) return;
+            e.preventDefault();
 
-    <div class="page">
-      <p>I’m really grateful for you</p>
-      <p class="muted">you know that, right</p>
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      <p>
-        As a really good<br>
-        close friend first and foremost
-      </p>
+            const newAngle = getAngle(clientX, clientY);
+            let delta = newAngle - lastAngle;
 
-      <p class="muted">
-        And as someone genuinely<br>
-        important in my life
-      </p>
+            // Fix wrap-around (e.g., crossing from 180 to -180)
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
 
-      <p class="small">
-        I don’t even know if I’m truly deserving of that<br>
-        but <em>alhamdulillah</em>
-      </p>
+            currentRotation += delta;
+            lastAngle = newAngle;
 
-      <button onclick="nextPage()">continue</button>
-    </div>
+            // Visual Update happens in loop for sync, but we can do it here too for instant feedback
+            // crank.style.transform = `rotate(${currentRotation}deg)`;
+        }
 
-    <div class="page">
-      <p>I wanted to give you something</p>
-      <p class="muted">not yet though</p>
+        // Mouse/Touch Up
+        function stopDrag() {
+            isDragging = false;
+            crank.style.transition = 'transform 0.5s ease-out'; // Momentum feel on release
+        }
 
-      <p class="small">
-        You could guess what it is<br>
-        but that would ruin the fun
-      </p>
+        // Game Loop
+        let smoothedVelocity = 0;
 
-      <button onclick="nextPage()">one more page</button>
-    </div>
+        function loop() {
+            // Calculate velocity based on frame-to-frame rotation difference
+            // This is more stable than event-based velocity
+            let velocity = currentRotation - lastRotation;
+            lastRotation = currentRotation;
 
-    <div class="page final">
-      <p>The gift is close</p>
-      <p class="muted">really close</p>
+            // Apply to visual
+            crank.style.transform = `rotate(${currentRotation}deg)`;
 
-      <p class="small">
-        Now wait for it<br>
-        like the last chapter of a good book
-      </p>
-    </div>
+            // Audio Logic
+            // We want the audio to play if there is significant positive (clockwise) velocity
+            // Or just velocity in general? Let's say any winding works.
+            let speed = Math.abs(velocity);
 
-  </div>
+            // Smooth the velocity for audio playback to prevent jitter
+            smoothedVelocity += (speed - smoothedVelocity) * 0.1;
 
-  <script>
-    const pages = document.querySelectorAll(".page");
-    let current = 0;
+            if (smoothedVelocity > 0.5) { // Threshold to start playing
+                if (audio.paused) {
+                    audio.play().catch(e => { }); // Ignore abortion errors
+                }
 
-    function nextPage() {
-      pages[current].classList.remove("active");
-      current++;
-      if (current < pages.length) {
-        pages[current].classList.add("active");
-      }
-    }
-  </script>
+                // Map speed to playback rate (optional, for fun physics)
+                // Normal winding might be ~5-15 deg per frame
+                let rate = 0.5 + (smoothedVelocity / 20);
+                rate = md_clamp(rate, 0.5, 2.0); // Clamp between 0.5x and 2.0x
+                audio.playbackRate = rate;
 
+                // Volume fade in
+                if (audio.volume < 1.0) audio.volume = Math.min(1.0, audio.volume + 0.05);
+
+                instruction.style.opacity = 0;
+            } else {
+                // Stop/Pause logic
+                // Fade out
+                if (audio.volume > 0.05) {
+                    audio.volume -= 0.05;
+                } else {
+                    audio.volume = 0;
+                    audio.pause();
+                }
+                if (!isDragging) instruction.style.opacity = 0.8;
+            }
+
+            // Update Progress
+            if (audio.duration) {
+                const p = (audio.currentTime / audio.duration) * 100;
+                progressBar.style.width = `${p}%`;
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        function md_clamp(val, min, max) {
+            return Math.min(Math.max(val, min), max);
+        }
+
+        // Events
+        crank.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', rotate);
+        window.addEventListener('mouseup', stopDrag);
+
+        crank.addEventListener('touchstart', startDrag, { passive: false });
+        window.addEventListener('touchmove', rotate, { passive: false });
+        window.addEventListener('touchend', stopDrag);
+
+        // Start
+        requestAnimationFrame(loop);
+
+    </script>
 </body>
+
 </html>
